@@ -405,10 +405,6 @@ body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; backgrou
                     <div class="field-label">담당자 이름</div>
                     <div class="field-value">김에어</div>
                   </div>
-                  <div class="field-row">
-                    <div class="field-label">담당자 연락처</div>
-                    <div class="field-value">@kimair (슬랙) / 내선 1234</div>
-                  </div>
                 </div>
               </div>
 
@@ -513,7 +509,9 @@ A. 선착순 100명은 가입 유도 문구이며, 해당 기간 개통 고객 �
 
             <!-- Q&A 탭 -->
             <div id="tab-qna" style="display:none; padding:16px;">
-              <div class="qna-item">
+
+              <!-- 댓글 #1: 질문 + 답변 완료 -->
+              <div class="qna-item" id="qna-1">
                 <div class="qna-meta">
                   <span class="qna-type qna-type-q">질문</span>
                   <b>서실장</b> · 고객센터 · 2026-05-08 14:22
@@ -523,25 +521,50 @@ A. 선착순 100명은 가입 유도 문구이며, 해당 기간 개통 고객 �
                   <div class="qna-meta"><b>김에어</b> · 마케팅팀 · 2026-05-08 15:05 (답변)</div>
                   <div class="qna-body">코드 입력 후 당일 내 개통까지 완료하셔야 혜택 적용됩니다. "코드 입력 + 당일 개통 완료" 모두 필요하다고 안내 부탁드립니다.</div>
                 </div>
+                <!-- 답변 입력창 (담당자만, 토글) -->
+                <div id="reply-box-1" style="display:none; margin-top:8px;">
+                  <textarea style="width:100%; border:1px solid #d0d0d0; padding:8px; font-size:12px; resize:none; border-radius:3px;" rows="3" placeholder="추가 답변을 입력하세요..."></textarea>
+                  <div style="text-align:right; margin-top:4px; display:flex; gap:6px; justify-content:flex-end;">
+                    <button class="btn btn-sm" onclick="closeReply('reply-box-1')">취소</button>
+                    <button class="btn btn-sm btn-primary">답변 등록</button>
+                  </div>
+                </div>
+                <div class="reply-btn-area" style="margin-top:8px;">
+                  <button class="btn btn-sm" onclick="openReply('reply-box-1', this)">답변</button>
+                </div>
               </div>
 
-              <div class="qna-item" style="border-left:3px solid #e65100;">
+              <!-- 댓글 #2: 오류 신고 + 미답변 -->
+              <div class="qna-item" style="border-left:3px solid #e65100;" id="qna-2">
                 <div class="qna-meta">
                   <span class="qna-type qna-type-err">오류 신고</span>
                   <b>서실장</b> · 고객센터 · 2026-05-09 10:15
-                  <span class="unread-dot" style="margin-left:auto;"></span> <span style="color:#e53935; font-size:11px;">미답변</span>
+                  <span class="unread-dot" style="margin-left:auto;"></span>
+                  <span style="color:#e53935; font-size:11px;">미답변</span>
                 </div>
                 <div class="qna-body">포인트 지급 일정에서 "익익월 15일"이 맞는데, 공지에 "익월 15일"로 오기입된 것 같습니다. 확인 부탁드립니다.</div>
+                <!-- 답변 입력창 (담당자만, 토글) -->
+                <div id="reply-box-2" style="display:none; margin-top:8px;">
+                  <textarea style="width:100%; border:1px solid #d0d0d0; padding:8px; font-size:12px; resize:none; border-radius:3px;" rows="3" placeholder="답변을 입력하세요... (등록 시 슬랙 @서실장 알림 발송)"></textarea>
+                  <div style="text-align:right; margin-top:4px; display:flex; gap:6px; justify-content:flex-end;">
+                    <button class="btn btn-sm" onclick="closeReply('reply-box-2')">취소</button>
+                    <button class="btn btn-sm btn-primary">답변 등록</button>
+                  </div>
+                </div>
+                <div class="reply-btn-area" style="margin-top:8px;">
+                  <button class="btn btn-sm btn-outline" onclick="openReply('reply-box-2', this)">답변</button>
+                </div>
               </div>
 
-              <!-- 댓글 입력 (담당자만, 고객센터는 질문만) -->
+              <!-- 새 댓글 작성 (고객센터: 질문 등록 / 담당자: 새 댓글) -->
               <div style="margin-top:16px; border:1px solid #e0e0e0; border-radius:4px; padding:12px; background:#fafafa;" id="comment-input-area">
-                <div style="font-size:12px; font-weight:600; margin-bottom:8px;" id="comment-area-title">답변 / 질문 등록</div>
+                <div style="font-size:12px; font-weight:600; margin-bottom:8px;" id="comment-area-title">새 댓글 등록</div>
                 <div style="display:flex; gap:6px; margin-bottom:8px;" id="comment-type-row">
                   <div style="font-size:11px; color:#888; line-height:26px;">유형:</div>
                   <button class="btn btn-sm" style="background:#e8f0fe; border-color:#c5d5f8; color:#1a56db;" onclick="selectType(this)">질문</button>
                   <button class="btn btn-sm" onclick="selectType(this)">오류 신고</button>
-                  <button class="btn btn-sm" onclick="selectType(this)">VOC 에스컬레이션</button>
+                  <button class="btn btn-sm" onclick="selectType(this)">긴급</button>
+                  <button class="btn btn-sm" onclick="selectType(this)">기타</button>
                 </div>
                 <textarea style="width:100%; border:1px solid #d0d0d0; padding:8px; font-size:12px; resize:none; border-radius:3px;" rows="3" placeholder="내용을 입력하세요... (등록 시 슬랙 #airCC_notice @담당자 알림 발송)"></textarea>
                 <div style="text-align:right; margin-top:8px;">
@@ -552,17 +575,19 @@ A. 선착순 100명은 가입 유도 문구이며, 해당 기간 개통 고객 �
 
             <!-- 수정 이력 탭 -->
             <div id="tab-history" style="display:none; padding:16px;">
+              <div style="font-size:11px; color:#aaa; margin-bottom:12px;">저장 시 입력한 수정 메모가 자동으로 기록됩니다.</div>
               <div class="history-row">
-                <div>
-                  <span class="history-ver">v2</span>
-                </div>
+                <div><span class="history-ver">v3</span></div>
                 <div class="history-body">
-                  <div>유의사항 — 선착순 100명 안내 문구 추가</div>
+                  <div>포인트 지급일 오기입 수정 (익월 → 익익월)</div>
+                  <div class="history-meta">김에어 · 2026-05-09 11:00</div>
+                </div>
+              </div>
+              <div class="history-row">
+                <div><span class="history-ver">v2</span></div>
+                <div class="history-body">
+                  <div>유의사항 선착순 문구 추가</div>
                   <div class="history-meta">김에어 · 2026-05-08 10:30</div>
-                  <div class="change-diff">
-                    <div class="diff-before">· 010 / MNP 고객만 지급 대상입니다.</div>
-                    <div class="diff-after">· 010 / MNP 고객만 지급 대상입니다.<br>· 매일 선착순 100명은 빠른 가입 유도 문구로, 실제 적용되지 않습니다.</div>
-                  </div>
                 </div>
               </div>
               <div class="history-row">
@@ -751,6 +776,18 @@ A. 선착순 100명은 가입 유도 문구이며, 해당 기간 개통 고객 �
         </div>
       </div>
 
+      <!-- 수정 메모 -->
+      <div class="section-box">
+        <div class="section-head">수정 메모 <span style="font-weight:400; color:#aaa; font-size:11px;">(선택) — 수정이력에 자동 기록됩니다</span></div>
+        <div class="section-body">
+          <div class="field-row" style="grid-template-columns:1fr;">
+            <div class="field-value" style="padding:12px;">
+              <textarea class="field-textarea" rows="2" placeholder="예) 유의사항 선착순 문구 추가, 포인트 지급일 오기입 수정"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 하단 버튼 -->
       <div class="form-footer">
         <div class="form-footer-hint">* 임시저장(기획중)은 슬랙 알림 미발송 / 출시전 이상 저장 시 #airCC_notice 알림 발송</div>
@@ -805,7 +842,10 @@ A. 선착순 100명은 가입 유도 문구이며, 해당 기간 개통 고객 �
       document.getElementById('new-notice-btn').style.display = '';
       document.getElementById('detail-action-btns').style.display = '';
       if(document.getElementById('status-change-area')) document.getElementById('status-change-area').style.display = '';
-      document.getElementById('comment-area-title').textContent = '답변 / 질문 등록';
+      document.getElementById('comment-area-title').textContent = '새 댓글 등록';
+      // 담당자: 개별 댓글 답변 버튼 노출
+      var replyBtnAreas = document.querySelectorAll('.reply-btn-area');
+      for (var i = 0; i < replyBtnAreas.length; i++) replyBtnAreas[i].style.display = '';
       document.getElementById('comment-type-row').style.display = 'flex';
     } else {
       document.getElementById('header-username').textContent = '서실장';
@@ -820,7 +860,9 @@ A. 선착순 100명은 가입 유도 문구이며, 해당 기간 개통 고객 �
       }
       if(document.getElementById('status-change-area')) document.getElementById('status-change-area').style.display = 'none';
       document.getElementById('comment-area-title').textContent = '질문 / 이슈 등록';
-      // 고객센터는 답변 유형 없이 질문/오류신고/VOC만
+      // 고객센터: 개별 댓글 답변 버튼 숨김
+      var replyBtnAreas = document.querySelectorAll('.reply-btn-area');
+      for (var i = 0; i < replyBtnAreas.length; i++) replyBtnAreas[i].style.display = 'none';
     }
   }
 
@@ -883,6 +925,24 @@ A. 선착순 100명은 가입 유도 문구이며, 해당 기간 개통 고객 �
 
     var countEl = document.querySelector('.table-count b:last-child');
     if (countEl) countEl.textContent = count;
+  }
+
+  function openReply(boxId, btn) {
+    var box = document.getElementById(boxId);
+    if (!box) return;
+    box.style.display = 'block';
+    box.querySelector('textarea').focus();
+    btn.style.display = 'none';
+  }
+
+  function closeReply(boxId) {
+    var box = document.getElementById(boxId);
+    if (!box) return;
+    box.style.display = 'none';
+    box.querySelector('textarea').value = '';
+    // 답변 버튼 다시 노출
+    var replyBtnArea = box.nextElementSibling;
+    if (replyBtnArea) replyBtnArea.querySelector('button').style.display = '';
   }
 
   function selectType(btn) {
