@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>airCC_notice 와이어프레임 (어드민 임베딩)</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background: #f4f5f7; color: #222; font-size: 13px; }
+
+/* ── 어드민 공통 레이아웃 ── */
+.admin-wrap { display: flex; min-height: 100vh; }
+
+/* 사이드바 */
+.sidebar {
+  width: 160px; min-width: 160px; background: #fff;
+  border-right: 1px solid #e0e0e0; display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 100;
+}
+.sidebar-logo {
+  height: 48px; display: flex; align-items: center; padding: 0 16px;
+  border-bottom: 1px solid #eee; font-weight: 700; font-size: 15px; letter-spacing: -0.5px;
+}
+.sidebar-logo sup { font-size: 8px; color: #aaa; vertical-align: super; margin-left: 1px; }
+.menu-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; font-size: 13px; cursor: pointer; color: #444;
+  border-bottom: 1px solid #f4f4f4;
+}
+.menu-item:hover { background: #f8f8f8; }
+.menu-item.parent { font-weight: 600; color: #222; }
+.menu-item.child { padding-left: 24px; font-size: 12px; color: #555; font-weight: 400; }
+.menu-item.child:hover { background: #f0f4ff; }
+.menu-item.active-menu { background: #e8f0fe; color: #1a56db; font-weight: 600; }
+.menu-icon { font-size: 13px; margin-right: 6px; filter: grayscale(1); }
+.menu-arrow { font-size: 10px; color: #bbb; }
+.sidebar-bottom { margin-top: auto; padding: 12px 16px; border-top: 1px solid #eee; }
+
+/* 헤더 */
+.admin-header {
+  position: fixed; top: 0; left: 160px; right: 0; height: 48px;
+  background: #fff; border-bottom: 1px solid #e0e0e0;
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 0 20px; gap: 12px; z-index: 99;
+}
+.header-search { font-size: 16px; cursor: pointer; color: #777; }
+.header-user { font-size: 12px; color: #444; text-align: right; line-height: 1.4; }
+.header-user-name { font-weight: 600; }
+.header-user-role { color: #aaa; font-size: 11px; }
+
+/* 메인 콘텐츠 */
+.admin-main { margin-left: 160px; margin-top: 48px; padding: 24px; flex: 1; }
+.page-title { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+.page-desc { font-size: 12px; color: #888; margin-bottom: 20px; }
+
+/* 화면 전환 */
+.screen { display: none; }
+.screen.on { display: block; }
+
+/* ── 카드/패널 ── */
+.card { background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 16px; margin-bottom: 16px; }
+.card-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+
+/* ── 필터 영역 ── */
+.filter-area { background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 16px; margin-bottom: 16px; }
+.filter-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.filter-group { display: flex; flex-direction: column; gap: 4px; }
+.filter-label { font-size: 11px; color: #888; }
+.filter-input { border: 1px solid #ccc; background: #fff; padding: 5px 8px; font-size: 12px; min-width: 120px; height: 30px; }
+.filter-input-lg { min-width: 200px; }
+.filter-btn-row { display: flex; gap: 6px; margin-top: 10px; justify-content: flex-end; }
+
+/* ── 버튼 ── */
+.btn { border: 1px solid #ccc; background: #fff; padding: 5px 14px; font-size: 12px; cursor: pointer; height: 30px; display: inline-flex; align-items: center; gap: 4px; }
+.btn-primary { background: #1a56db; color: #fff; border-color: #1a56db; font-weight: 600; }
+.btn-sm { padding: 3px 10px; font-size: 11px; height: 24px; }
+.btn-outline { background: #fff; color: #1a56db; border-color: #1a56db; }
+
+/* ── 상태 뱃지 ── */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 11px; font-weight: 600; border: 1px solid #ccc; background: #f5f5f5; color: #555; }
+.badge-blue { background: #e8f0fe; color: #1a56db; border-color: #c5d5f8; }   /* 진행중 */
+.badge-orange { background: #fff3e0; color: #e65100; border-color: #ffcc80; } /* 출시전 */
+.badge-gray { background: #f5f5f5; color: #aaa; border-color: #e0e0e0; }      /* 종료 */
+.badge-green { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; } /* 기획중 */
+
+/* ── 테이블 ── */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { background: #f8f8f8; border-bottom: 2px solid #e0e0e0; border-top: 1px solid #e0e0e0; padding: 8px 12px; text-align: left; font-size: 12px; color: #666; font-weight: 600; white-space: nowrap; }
+.data-table td { border-bottom: 1px solid #f0f0f0; padding: 9px 12px; font-size: 12px; vertical-align: middle; }
+.data-table tr:hover td { background: #f8faff; cursor: pointer; }
+.table-actions { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.table-count { font-size: 12px; color: #666; }
+
+/* ── 상세/폼 ── */
+.detail-wrap { display: flex; gap: 16px; }
+.detail-main { flex: 1; }
+.detail-side { width: 240px; min-width: 240px; }
+
+.section-box { background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 12px; overflow: hidden; }
+.section-head { background: #f8f8f8; border-bottom: 1px solid #e0e0e0; padding: 8px 14px; font-size: 12px; font-weight: 700; color: #444; }
+.section-body { padding: 0; }
+.field-row { display: grid; grid-template-columns: 160px 1fr; border-bottom: 1px solid #f4f4f4; min-height: 36px; }
+.field-row:last-child { border-bottom: none; }
+.field-label { background: #fafafa; border-right: 1px solid #f0f0f0; padding: 8px 12px; font-size: 12px; color: #666; display: flex; align-items: flex-start; padding-top: 10px; }
+.field-value { padding: 8px 12px; font-size: 12px; color: #222; line-height: 1.6; }
+.field-input { border: 1px solid #d0d0d0; background: #fff; padding: 5px 8px; font-size: 12px; width: 100%; }
+.field-textarea { border: 1px solid #d0d0d0; background: #fff; padding: 6px 8px; font-size: 12px; width: 100%; resize: none; line-height: 1.6; }
+.field-hint { font-size: 10px; color: #aaa; margin-top: 3px; }
+
+/* ── Q&A 댓글 ── */
+.qna-item { border: 1px solid #e8e8e8; border-radius: 3px; padding: 10px 12px; margin-bottom: 8px; background: #fafafa; }
+.qna-meta { font-size: 11px; color: #aaa; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+.qna-body { font-size: 12px; line-height: 1.6; }
+.qna-reply { margin-top: 8px; margin-left: 12px; border-left: 3px solid #c5d5f8; padding: 8px 10px; background: #f0f4ff; border-radius: 0 3px 3px 0; }
+.qna-type { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 2px; font-weight: 600; }
+.qna-type-q { background: #e8f0fe; color: #1a56db; }
+.qna-type-err { background: #fff3e0; color: #e65100; }
+.qna-type-voc { background: #fce4ec; color: #c62828; }
+.unread-dot { width: 6px; height: 6px; background: #e53935; border-radius: 50%; display: inline-block; }
+
+/* ── 수정이력 ── */
+.history-row { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f4f4f4; font-size: 12px; align-items: flex-start; }
+.history-ver { background: #e8f0fe; color: #1a56db; border: 1px solid #c5d5f8; padding: 1px 7px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.history-body { flex: 1; }
+.history-meta { font-size: 11px; color: #aaa; margin-top: 2px; }
+.change-diff { background: #f8f8f8; border: 1px solid #e8e8e8; border-radius: 3px; padding: 6px 8px; margin-top: 6px; font-size: 11px; color: #666; line-height: 1.6; }
+.diff-before { color: #c62828; text-decoration: line-through; }
+.diff-after { color: #2e7d32; }
+
+/* ── 폼 하단 버튼 고정 ── */
+.form-footer { background: #fff; border-top: 1px solid #e0e0e0; padding: 12px 24px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.form-footer-hint { flex: 1; font-size: 11px; color: #aaa; }
+
+/* ── 탭 ── */
+.tabs { display: flex; border-bottom: 2px solid #e0e0e0; margin-bottom: 0; }
+.tab { padding: 8px 16px; font-size: 12px; cursor: pointer; color: #888; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.tab:hover { color: #333; }
+.tab.active-tab { color: #1a56db; border-bottom-color: #1a56db; font-weight: 600; }
+
+/* ── 상태 변경 박스 ── */
+.status-box { background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 14px; margin-bottom: 12px; }
+.status-flow { display: flex; align-items: center; gap: 0; margin: 10px 0; }
+.status-step { flex: 1; text-align: center; padding: 6px 4px; border: 1px solid #d0d0d0; background: #f8f8f8; font-size: 11px; color: #888; }
+.status-step.current { background: #e8f0fe; color: #1a56db; border-color: #c5d5f8; font-weight: 700; }
+.status-arrow { color: #ccc; font-size: 12px; padding: 0 2px; }
+
+/* ── 상태 카테고리 패널 ── */
+.cat-panel { background:#fff; border:1px solid #e0e0e0; border-radius:4px; overflow:hidden; }
+.cat-panel-head { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid #f0f0f0; }
+.cat-panel-title { font-size:12px; font-weight:700; color:#333; }
+.cat-panel-fold { font-size:11px; color:#1a56db; cursor:pointer; }
+.cat-item { display:flex; align-items:center; justify-content:space-between; padding:9px 12px; font-size:12px; color:#555; cursor:pointer; border-bottom:1px solid #f4f4f4; }
+.cat-item:last-child { border-bottom:none; }
+.cat-item:hover { background:#f0f4ff; color:#1a56db; }
+.cat-item.active-cat { background:#e8f0fe; color:#1a56db; font-weight:700; }
+.cat-count { background:#eee; border-radius:8px; font-size:10px; padding:1px 7px; color:#888; min-width:20px; text-align:center; }
+.cat-item.active-cat .cat-count { background:#c5d5f8; color:#1a56db; }
+
+/* ── 전환기 ── */
+.screen-switcher {
+  position: fixed; bottom: 0; left: 160px; right: 0;
+  background: #1a1a2e; color: #fff; padding: 8px 16px;
+  display: flex; gap: 6px; align-items: center; z-index: 999; flex-wrap: wrap;
+}
+.switcher-label { font-size: 11px; color: #aaa; margin-right: 6px; white-space: nowrap; }
+.sw-btn { background: #2d2d44; border: 1px solid #444; color: #ccc; padding: 4px 10px; font-size: 11px; cursor: pointer; border-radius: 2px; white-space: nowrap; }
+.sw-btn.on { background: #1a56db; color: #fff; border-color: #1a56db; }
+.sw-btn:hover { background: #3a3a55; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     공통: 어드민 사이드바 + 헤더 (모든 화면 공통)
+════════════════════════════════════════════ -->
+
+<div class="admin-wrap">
+
+  <!-- 사이드바 -->
+  <div class="sidebar">
+    <div class="sidebar-logo">air<sup>+</sup></div>
+
+    <div class="menu-item parent"><span><span class="menu-icon">🏠</span>홈</span></div>
+    <div class="menu-item parent"><span><span class="menu-icon">👥</span>회원 관리</span><span class="menu-arrow">›</span></div>
+    <div class="menu-item parent"><span><span class="menu-icon">📦</span>상품 관리</span><span class="menu-arrow">›</span></div>
+    <div class="menu-item parent"><span><span class="menu-icon">📢</span>전시/마케팅</span><span class="menu-arrow">›</span></div>
+    <div class="menu-item parent"><span><span class="menu-icon">🎁</span>포인트/혜택</span><span class="menu-arrow">›</span></div>
+    <div class="menu-item parent"><span><span class="menu-icon">🔔</span>Push/알림</span><span class="menu-arrow">›</span></div>
+
+    <!-- 고객 안내 (펼쳐진 상태) -->
+    <div class="menu-item parent" style="background:#f8f8f8;"><span><span class="menu-icon">💬</span>고객 안내</span><span class="menu-arrow">∨</span></div>
+    <div class="menu-item child" onclick="goScreen('s1')">공지사항 관리</div>
+    <div class="menu-item child" onclick="goScreen('s1')">자주묻는 질문</div>
+    <div class="menu-item child active-menu" onclick="goScreen('s1')">📌 접점공지</div>
+    <div class="menu-item child" onclick="goScreen('s1')">도움말 관리</div>
+    <div class="menu-item child" onclick="goScreen('s1')">약관 관리</div>
+
+    <div class="menu-item parent"><span><span class="menu-icon">📁</span>파일 관리</span><span class="menu-arrow">›</span></div>
+    <div class="menu-item parent"><span><span class="menu-icon">⚙️</span>시스템</span><span class="menu-arrow">›</span></div>
+
+    <div class="sidebar-bottom">
+      <div style="font-size:11px; color:#aaa;">🎧 고객 지원 센터</div>
+    </div>
+  </div>
+
+  <!-- 헤더 -->
+  <div class="admin-header">
+    <span class="header-search">🔍</span>
+    <div class="header-user">
+      <div class="header-user-name" id="header-username">김에어</div>
+      <div class="header-user-role" id="header-role">마케팅팀 · 담당자</div>
+    </div>
+  </div>
+
+  <!-- 메인 콘텐츠 영역 -->
+  <div class="admin-main">
+
+
+    <!-- ══════════════════════════════════
+         S1. 공지 목록
+    ══════════════════════════════════ -->
+    <div class="screen on" id="s1">
+      <div class="page-title">접점공지 관리</div>
+      <div class="page-desc">이벤트·프로모션 접점공지를 등록하고 고객센터와 공유합니다.</div>
+
+      <!-- 2열 레이아웃: 왼쪽 상태 패널 + 오른쪽 메인 -->
+      <div style="display:flex; gap:14px; align-items:flex-start;">
+
+        <!-- ▌왼쪽: 상태별 필터 패널 -->
+        <div style="width:128px; min-width:128px;">
+          <div class="cat-panel">
+            <div class="cat-panel-head">
+              <span class="cat-panel-title">상태</span>
+              <span class="cat-panel-fold">접기</span>
+            </div>
+            <div class="cat-item active-cat" onclick="filterStatus(this,'전체')">
+              전체 <span class="cat-count" id="cnt-all">6</span>
+            </div>
+            <div class="cat-item" onclick="filterStatus(this,'기획중·출시전')">
+              기획중·출시전 <span class="cat-count" id="cnt-plan">1</span>
+            </div>
+            <div class="cat-item" onclick="filterStatus(this,'진행중')">
+              진행중 <span class="cat-count" id="cnt-live">2</span>
+            </div>
+            <div class="cat-item" onclick="filterStatus(this,'종료')">
+              종료 <span class="cat-count" id="cnt-end">3</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ▌오른쪽: 검색/필터 + 목록 -->
+        <div style="flex:1; min-width:0;">
+
+          <!-- 검색/필터 카드 -->
+          <div class="card" style="margin-bottom:14px;">
+            <div class="card-title">검색 / 필터</div>
+            <div style="display:grid; grid-template-columns:110px 1fr 120px 120px; gap:10px 12px; align-items:end;">
+              <div>
+                <div class="filter-label">검색 대상</div>
+                <select class="filter-input" style="width:100%;">
+                  <option>프로모션명</option>
+                  <option>담당자</option>
+                </select>
+              </div>
+              <div>
+                <div class="filter-label">검색어</div>
+                <input class="filter-input" style="width:100%;" placeholder="검색어를 입력하세요">
+              </div>
+              <div>
+                <div class="filter-label">진행 기간 시작</div>
+                <input class="filter-input" type="month" style="width:100%;">
+              </div>
+              <div>
+                <div class="filter-label">진행 기간 종료</div>
+                <input class="filter-input" type="month" style="width:100%;">
+              </div>
+            </div>
+            <div class="filter-btn-row">
+              <button class="btn">초기화</button>
+              <button class="btn btn-primary">검색</button>
+            </div>
+          </div>
+
+          <!-- 목록 테이블 -->
+          <div class="card" style="padding:0; overflow:hidden;">
+            <div class="table-actions" style="padding:12px 14px; border-bottom:1px solid #f0f0f0;">
+              <span class="table-count">현재 카테고리: <b id="filter-label-current">전체</b> &nbsp;|&nbsp; 총 <b>6</b>건</span>
+              <div style="display:flex; gap:6px;" id="new-notice-btn">
+                <button class="btn btn-primary" onclick="goScreen('s3')">+ 신규 공지 작성</button>
+              </div>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:80px;">상태</th>
+                  <th>프로모션/이벤트 명</th>
+                  <th style="width:140px;">진행 기간</th>
+                  <th style="width:70px;">담당자</th>
+                  <th style="width:60px; text-align:center;">Q&A</th>
+                  <th style="width:110px;">최근 수정일</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr onclick="goScreen('s2')">
+                  <td><span class="badge badge-blue">진행중</span></td>
+                  <td><b>연휴 이벤트 (PARENTSDAY)</b></td>
+                  <td>5/8 ~ 5/12</td>
+                  <td>김에어</td>
+                  <td style="text-align:center;">2건 <span class="unread-dot"></span></td>
+                  <td>2026-05-08 10:30</td>
+                </tr>
+                <tr onclick="goScreen('s2')">
+                  <td><span class="badge badge-blue">진행중</span></td>
+                  <td><b>히든웹 이벤트 (5월 둘째주)</b></td>
+                  <td>5/8 ~ 5/12</td>
+                  <td>김에어</td>
+                  <td style="text-align:center;">0건</td>
+                  <td>2026-05-06 09:30</td>
+                </tr>
+                <tr onclick="goScreen('s2')">
+                  <td><span class="badge badge-green">기획중</span></td>
+                  <td><b>6월 여름 데이터 프로모션</b></td>
+                  <td>6/1 ~ 6/30</td>
+                  <td>김에어</td>
+                  <td style="text-align:center;">—</td>
+                  <td>2026-05-20 09:00</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-gray">종료</span></td>
+                  <td>air 보너스팩 연장 이벤트</td>
+                  <td>4/9 ~ 4/30</td>
+                  <td>김에어</td>
+                  <td style="text-align:center;">3건</td>
+                  <td>2026-04-10 16:00</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-gray">종료</span></td>
+                  <td>카카오페이 알림톡 사전 안내</td>
+                  <td>5/14</td>
+                  <td>김에어</td>
+                  <td style="text-align:center;">0건</td>
+                  <td>2026-05-13 10:00</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-gray">종료</span></td>
+                  <td>설맞이 떡뽑기 프로모션</td>
+                  <td>2/5 ~ 2/18</td>
+                  <td>김에어</td>
+                  <td style="text-align:center;">0건</td>
+                  <td>2026-02-03 14:00</td>
+                </tr>
+              </tbody>
+            </table>
+          </div><!-- /table card -->
+
+        </div><!-- /오른쪽 -->
+      </div><!-- /2열 레이아웃 -->
+    </div><!-- /s1 -->
+
+
+    <!-- ══════════════════════════════════
+         S2. 공지 상세
+    ══════════════════════════════════ -->
+    <div class="screen" id="s2">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+        <div>
+          <div style="font-size:11px; color:#aaa; margin-bottom:4px;">
+            <span style="cursor:pointer; color:#1a56db;" onclick="goScreen('s1')">접점공지 관리</span> &gt; 공지 상세
+          </div>
+          <div class="page-title">연휴 이벤트 (PARENTSDAY)</div>
+        </div>
+        <div style="display:flex; gap:6px;" id="detail-action-btns">
+          <button class="btn" onclick="goScreen('s1')">목록</button>
+          <button class="btn btn-outline" onclick="goScreen('s3')">수정</button>
+        </div>
+      </div>
+      <div class="page-desc">등록일 2026-05-06 · 최근 수정 2026-05-08 · 담당자: 김에어</div>
+
+      <div class="detail-wrap">
+        <!-- 좌측 본문 -->
+        <div class="detail-main">
+
+          <!-- 탭 -->
+          <div class="card" style="padding:0; overflow:hidden;">
+            <div class="tabs" style="padding:0 16px; border-bottom:2px solid #e0e0e0;">
+              <div class="tab active-tab" onclick="switchTab(this,'tab-content')">공지 내용</div>
+              <div class="tab" onclick="switchTab(this,'tab-qna')">Q&A <span style="color:#e53935; font-size:10px; font-weight:700; margin-left:2px;">●1</span></div>
+              <div class="tab" onclick="switchTab(this,'tab-history')">수정 이력</div>
+            </div>
+
+            <!-- 공지 내용 탭 -->
+            <div id="tab-content" style="padding:0;">
+
+              <div class="section-box" style="border:none; border-bottom:1px solid #e8e8e8; border-radius:0;">
+                <div class="section-head">담당자 정보</div>
+                <div class="section-body">
+                  <div class="field-row">
+                    <div class="field-label">담당자 이름</div>
+                    <div class="field-value">김에어</div>
+                  </div>
+                  <div class="field-row">
+                    <div class="field-label">담당자 연락처</div>
+                    <div class="field-value">@kimair (슬랙) / 내선 1234</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="section-box" style="border:none; border-bottom:1px solid #e8e8e8; border-radius:0;">
+                <div class="section-head">프로모션 기본 정보</div>
+                <div class="section-body">
+                  <div class="field-row">
+                    <div class="field-label">프로모션/이벤트 명</div>
+                    <div class="field-value"><b>연휴 이벤트 (PARENTSDAY)</b></div>
+                  </div>
+                  <div class="field-row">
+                    <div class="field-label">진행 기간</div>
+                    <div class="field-value">2026년 5월 8일(목) ~ 5월 12일(월)</div>
+                  </div>
+                  <div class="field-row">
+                    <div class="field-label">프로모션 적용 조건</div>
+                    <div class="field-value">KT, LG U+ 비회선 고객 (010 MNP)</div>
+                  </div>
+                  <div class="field-row">
+                    <div class="field-label">프로모션 코드</div>
+                    <div class="field-value"><b style="font-family:monospace; background:#f4f5f7; padding:2px 6px;">PARENTSDAY</b></div>
+                  </div>
+                  <div class="field-row">
+                    <div class="field-label">적용 세부 조건</div>
+                    <div class="field-value">해당 기간 PARENTSDAY 코드 입력 후 개통 완료 시 혜택 적용<br>※ 프로모션 코드는 당일까지 입력 필수</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="section-box" style="border:none; border-bottom:1px solid #e8e8e8; border-radius:0;">
+                <div class="section-head">혜택 정보</div>
+                <div class="section-body">
+                  <div class="field-row">
+                    <div class="field-label">포인트 지급 금액/방식</div>
+                    <div class="field-value">매월 8,000P (air 포인트)</div>
+                  </div>
+                  <div class="field-row">
+                    <div class="field-label">포인트 지급 일정</div>
+                    <div class="field-value">익익월 15일부터 12개월간 매월 지급<br><span style="color:#888; font-size:11px;">예) 5/8~5/12 가입 → 7/15부터 지급 시작</span></div>
+                  </div>
+                  <div class="field-row">
+                    <div class="field-label">중복 적용 가능 여부</div>
+                    <div class="field-value">에어프렌즈 3만P 중복 가능 / 이외 다른 요금제 프로모션 중복 불가</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="section-box" style="border:none; border-bottom:1px solid #e8e8e8; border-radius:0;">
+                <div class="section-head">운영 정보</div>
+                <div class="section-body">
+                  <div class="field-row">
+                    <div class="field-label">이벤트 페이지 링크</div>
+                    <div class="field-value" style="color:#1a56db; text-decoration:underline; cursor:pointer;">https://www.sktair.com/notice/nn-board-item-304A…</div>
+                  </div>
+                  <div class="field-row">
+                    <div class="field-label">노출/Open 시점</div>
+                    <div class="field-value">5/8 오전 11시 (PUSH 발송 시점과 동일)</div>
+                  </div>
+                  <div class="field-row">
+                    <div class="field-label">air Admin 정책 정보</div>
+                    <div class="field-value">요금제 프로모션 > PARENTSDAY 코드 등록 고객 대상</div>
+                  </div>
+                  <div class="field-row">
+                    <div class="field-label">고객 안내 방식</div>
+                    <div class="field-value">PUSH 메시지 (5/8 오전 11~12시 발송)</div>
+                  </div>
+                  <div class="field-row">
+                    <div class="field-label">첨부 이미지</div>
+                    <div class="field-value">
+                      <div style="display:inline-block; width:80px; height:60px; background:#e8e8e8; border:1px solid #ccc; text-align:center; line-height:60px; font-size:10px; color:#999; margin-right:6px; cursor:pointer;">이미지1</div>
+                      <div style="display:inline-block; width:80px; height:60px; background:#e8e8e8; border:1px solid #ccc; text-align:center; line-height:60px; font-size:10px; color:#999; cursor:pointer;">이미지2</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="section-box" style="border:none; border-bottom:1px solid #e8e8e8; border-radius:0;">
+                <div class="section-head">유의사항</div>
+                <div class="section-body">
+                  <div style="padding:12px 14px; font-size:12px; line-height:1.9; white-space:pre-line; color:#333;">· 010 / MNP 고객만 지급 대상입니다.
+· 프로모션 코드는 당일까지 입력 필수입니다.
+· 타 요금제 프로모션과 중복 적용 불가합니다.
+· 매일 선착순 100명은 빠른 가입 유도 문구로, 실제 적용되지 않습니다.
+  → 고객 문의 시: "100명 안에 드셔서 혜택 적용 가능하다"로 안내</div>
+                </div>
+              </div>
+
+              <div class="section-box" style="border:none; border-radius:0;">
+                <div class="section-head">예상 FAQ</div>
+                <div class="section-body">
+                  <div style="padding:12px 14px; font-size:12px; line-height:1.9; white-space:pre-line; color:#333;">Q. 프로모션 코드는 언제까지 입력해야 하나요?
+A. 이벤트 당일(5/12)까지 입력하셔야 합니다.
+
+Q. 에어프렌즈 포인트와 중복 적용이 되나요?
+A. 에어프렌즈 3만P는 중복 적용 가능합니다.
+
+Q. 선착순 100명이 지났으면 혜택을 못 받나요?
+A. 선착순 100명은 가입 유도 문구이며, 해당 기간 개통 고객 전원 혜택 적용됩니다.</div>
+                </div>
+              </div>
+            </div><!-- /tab-content -->
+
+            <!-- Q&A 탭 -->
+            <div id="tab-qna" style="display:none; padding:16px;">
+              <div class="qna-item">
+                <div class="qna-meta">
+                  <span class="qna-type qna-type-q">질문</span>
+                  <b>서실장</b> · 고객센터 · 2026-05-08 14:22
+                </div>
+                <div class="qna-body">PARENTSDAY 코드 입력 후 개통까지 완료해야 하는지, 코드 입력만 해도 되는지 문의드립니다.</div>
+                <div class="qna-reply">
+                  <div class="qna-meta"><b>김에어</b> · 마케팅팀 · 2026-05-08 15:05 (답변)</div>
+                  <div class="qna-body">코드 입력 후 당일 내 개통까지 완료하셔야 혜택 적용됩니다. "코드 입력 + 당일 개통 완료" 모두 필요하다고 안내 부탁드립니다.</div>
+                </div>
+              </div>
+
+              <div class="qna-item" style="border-left:3px solid #e65100;">
+                <div class="qna-meta">
+                  <span class="qna-type qna-type-err">오류 신고</span>
+                  <b>서실장</b> · 고객센터 · 2026-05-09 10:15
+                  <span class="unread-dot" style="margin-left:auto;"></span> <span style="color:#e53935; font-size:11px;">미답변</span>
+                </div>
+                <div class="qna-body">포인트 지급 일정에서 "익익월 15일"이 맞는데, 공지에 "익월 15일"로 오기입된 것 같습니다. 확인 부탁드립니다.</div>
+              </div>
+
+              <!-- 댓글 입력 (담당자만, 고객센터는 질문만) -->
+              <div style="margin-top:16px; border:1px solid #e0e0e0; border-radius:4px; padding:12px; background:#fafafa;" id="comment-input-area">
+                <div style="font-size:12px; font-weight:600; margin-bottom:8px;" id="comment-area-title">답변 / 질문 등록</div>
+                <div style="display:flex; gap:6px; margin-bottom:8px;" id="comment-type-row">
+                  <div style="font-size:11px; color:#888; line-height:26px;">유형:</div>
+                  <button class="btn btn-sm" style="background:#e8f0fe; border-color:#c5d5f8; color:#1a56db;" onclick="selectType(this)">질문</button>
+                  <button class="btn btn-sm" onclick="selectType(this)">오류 신고</button>
+                  <button class="btn btn-sm" onclick="selectType(this)">VOC 에스컬레이션</button>
+                </div>
+                <textarea style="width:100%; border:1px solid #d0d0d0; padding:8px; font-size:12px; resize:none; border-radius:3px;" rows="3" placeholder="내용을 입력하세요... (등록 시 슬랙 #airCC_notice @담당자 알림 발송)"></textarea>
+                <div style="text-align:right; margin-top:8px;">
+                  <button class="btn btn-primary">등록</button>
+                </div>
+              </div>
+            </div><!-- /tab-qna -->
+
+            <!-- 수정 이력 탭 -->
+            <div id="tab-history" style="display:none; padding:16px;">
+              <div class="history-row">
+                <div>
+                  <span class="history-ver">v2</span>
+                </div>
+                <div class="history-body">
+                  <div>유의사항 — 선착순 100명 안내 문구 추가</div>
+                  <div class="history-meta">김에어 · 2026-05-08 10:30</div>
+                  <div class="change-diff">
+                    <div class="diff-before">· 010 / MNP 고객만 지급 대상입니다.</div>
+                    <div class="diff-after">· 010 / MNP 고객만 지급 대상입니다.<br>· 매일 선착순 100명은 빠른 가입 유도 문구로, 실제 적용되지 않습니다.</div>
+                  </div>
+                </div>
+              </div>
+              <div class="history-row">
+                <div><span class="history-ver">v1</span></div>
+                <div class="history-body">
+                  <div>최초 공지 등록</div>
+                  <div class="history-meta">김에어 · 2026-05-06 09:00</div>
+                </div>
+              </div>
+            </div><!-- /tab-history -->
+
+          </div><!-- /card tabs -->
+        </div><!-- /detail-main -->
+
+      </div><!-- /detail-wrap -->
+    </div><!-- /s2 -->
+
+
+    <!-- ══════════════════════════════════
+         S3. 공지 작성/수정
+    ══════════════════════════════════ -->
+    <div class="screen" id="s3">
+      <div style="font-size:11px; color:#aaa; margin-bottom:4px;">
+        <span style="cursor:pointer; color:#1a56db;" onclick="goScreen('s1')">접점공지 관리</span> &gt; 신규 공지 작성
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <div class="page-title">신규 공지 작성</div>
+        <div style="font-size:12px; color:#888;">
+          현재 상태:
+          <select style="border:1px solid #d0d0d0; padding:3px 6px; font-size:12px; margin-left:4px;">
+            <option>◐ 기획중 (임시저장)</option>
+            <option>○ 출시전</option>
+            <option>● 진행중</option>
+            <option>✓ 종료</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ① 담당자 정보 -->
+      <div class="section-box">
+        <div class="section-head">① 담당자 정보</div>
+        <div class="section-body">
+          <div class="field-row">
+            <div class="field-label">담당자 이름</div>
+            <div class="field-value">
+              <input class="field-input" style="max-width:200px;" placeholder="예) 김에어">
+              <div class="field-hint">슬랙 알림 발신자명으로 표시됩니다</div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">담당자 연락처</div>
+            <div class="field-value">
+              <input class="field-input" style="max-width:280px;" placeholder="예) @kimair (슬랙) / 내선 1234">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ② 프로모션 기본 정보 -->
+      <div class="section-box">
+        <div class="section-head">② 프로모션 기본 정보</div>
+        <div class="section-body">
+          <div class="field-row">
+            <div class="field-label">프로모션/이벤트 명</div>
+            <div class="field-value"><input class="field-input" placeholder="예) 연휴 이벤트 (PARENTSDAY)"></div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">진행 기간</div>
+            <div class="field-value" style="display:flex; align-items:center; gap:8px; padding:8px 12px;">
+              <input class="field-input" type="date" style="width:140px;">
+              <span style="color:#aaa;">~</span>
+              <input class="field-input" type="date" style="width:140px;">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">프로모션 적용 조건</div>
+            <div class="field-value">
+              <input class="field-input" placeholder="예) KT, LG U+ 비회선 고객 (010 MNP)">
+              <div class="field-hint">가입/개통 유형, 대상 요금제 등</div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">프로모션 코드</div>
+            <div class="field-value">
+              <input class="field-input" style="max-width:220px;" placeholder="예) PARENTSDAY (없으면 &quot;없음&quot; 입력)">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">적용 세부 조건</div>
+            <div class="field-value">
+              <textarea class="field-textarea" rows="3" placeholder="예) 히든 웹 접속 후 개통 완료 시 / 코드 등록은 당일까지 입력 필수"></textarea>
+              <div class="field-hint">접속 방식, 코드 등록 시점, 개통 완료 조건 등 세부 안내</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ③ 혜택 정보 -->
+      <div class="section-box">
+        <div class="section-head">③ 혜택 정보</div>
+        <div class="section-body">
+          <div class="field-row">
+            <div class="field-label">포인트 지급 금액/방식</div>
+            <div class="field-value">
+              <textarea class="field-textarea" rows="2" placeholder="예) 매월 8,000P (air 포인트) / 네이버페이 포인트 2,026원 일괄 지급"></textarea>
+              <div class="field-hint">air포인트 / 네이버페이 구분, 문자 / 카카오 지급 방식 명시</div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">포인트 지급 일정</div>
+            <div class="field-value">
+              <textarea class="field-textarea" rows="2" placeholder="예) 익익월 15일부터 12개월간 매월 지급&#10;5/8~5/12 가입 → 7/15부터 지급 시작"></textarea>
+              <div class="field-hint">월을 걸치는 경우 실제 지급일 명시 필요</div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">중복 적용 가능 여부</div>
+            <div class="field-value">
+              <textarea class="field-textarea" rows="2" placeholder="예) 에어프렌즈 3만P 중복 가능 / 이외 다른 요금제 프로모션 중복 불가"></textarea>
+              <div class="field-hint">중복 가능한 프로모션/이벤트 명칭 구체적으로 기재</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ④ 운영 정보 -->
+      <div class="section-box">
+        <div class="section-head">④ 운영 정보</div>
+        <div class="section-body">
+          <div class="field-row">
+            <div class="field-label">이벤트 페이지 링크</div>
+            <div class="field-value"><input class="field-input" placeholder="https://..."></div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">노출/Open 시점</div>
+            <div class="field-value">
+              <input class="field-input" placeholder="예) 5/8 오전 11시 (PUSH 발송 시점과 동일)">
+              <div class="field-hint">진행 기간 시작일과 다를 경우 반드시 명시</div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">air Admin 정책 정보</div>
+            <div class="field-value"><input class="field-input" placeholder="예) 요금제 프로모션 > PARENTSDAY 코드 등록 고객 대상"></div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">고객 안내 방식</div>
+            <div class="field-value">
+              <input class="field-input" placeholder="예) PUSH 메시지 (5/8 오전 11~12시 발송)">
+              <div class="field-hint">PUSH / MMS / 카카오 알림톡 / 인앱 등 구분하여 기재</div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">이미지 첨부</div>
+            <div class="field-value">
+              <div style="border:1px dashed #ccc; background:#f8f8f8; padding:16px; text-align:center; color:#aaa; font-size:12px; cursor:pointer;">
+                📎 클릭하거나 파일을 드래그하여 첨부<br>
+                <span style="font-size:10px;">이벤트 시안, 유의사항 이미지 등</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑤ 유의사항 -->
+      <div class="section-box">
+        <div class="section-head">⑤ 프로모션/이벤트 유의사항</div>
+        <div class="section-body">
+          <div class="field-row" style="grid-template-columns:1fr;">
+            <div class="field-value" style="padding:12px;">
+              <textarea class="field-textarea" rows="6" placeholder="실제 고객께 노출되는 유의사항 전문을 텍스트로 입력하세요.&#10;&#10;예)&#10;· 010 / MNP 고객만 지급 대상입니다.&#10;· 프로모션 코드는 당일까지 입력 필수입니다.&#10;· 타 요금제 프로모션과 중복 적용 불가합니다."></textarea>
+              <div class="field-hint">이미지로 제공되는 유의사항도 텍스트로 함께 입력해 주세요.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑥ 예상 FAQ -->
+      <div class="section-box">
+        <div class="section-head">⑥ 예상 FAQ</div>
+        <div class="section-body">
+          <div class="field-row" style="grid-template-columns:1fr;">
+            <div class="field-value" style="padding:12px;">
+              <textarea class="field-textarea" rows="6" placeholder="고객 문의 예상 Q&A를 미리 작성해 주세요.&#10;&#10;Q. 프로모션 코드는 언제까지 입력해야 하나요?&#10;A. 이벤트 당일까지 입력하셔야 합니다.&#10;&#10;Q. 에어프렌즈와 중복 적용이 되나요?&#10;A. 에어프렌즈 3만P는 중복 적용 가능합니다."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 하단 버튼 -->
+      <div class="form-footer">
+        <div class="form-footer-hint">* 임시저장(기획중)은 슬랙 알림 미발송 / 출시전 이상 저장 시 #airCC_notice 알림 발송</div>
+        <button class="btn" onclick="goScreen('s1')">취소</button>
+        <button class="btn">임시저장 (기획중)</button>
+        <button class="btn btn-primary" onclick="goScreen('s2')">저장 및 발행</button>
+      </div>
+
+    </div><!-- /s3 -->
+
+
+  </div><!-- /admin-main -->
+</div><!-- /admin-wrap -->
+
+
+<!-- 화면 전환기 -->
+<div class="screen-switcher">
+  <span class="switcher-label">화면 전환:</span>
+  <button class="sw-btn on" data-screen="s1" onclick="goScreen('s1')">① 공지 목록</button>
+  <button class="sw-btn" data-screen="s2" onclick="goScreen('s2')">② 공지 상세</button>
+  <button class="sw-btn" data-screen="s3" onclick="goScreen('s3')">③ 공지 작성</button>
+  <span class="switcher-label" style="margin-left:16px;">역할 전환:</span>
+  <button class="sw-btn" onclick="setRole('manager')">담당자 (김에어)</button>
+  <button class="sw-btn" onclick="setRole('cs')">고객센터 (서실장)</button>
+</div>
+
+
+<script>
+  var currentRole = 'manager';
+
+  function goScreen(id) {
+    var screens = document.querySelectorAll('.screen');
+    for (var i = 0; i < screens.length; i++) {
+      screens[i].style.display = 'none';
+    }
+    var target = document.getElementById(id);
+    if (target) target.style.display = 'block';
+
+    var btns = document.querySelectorAll('.sw-btn[data-screen]');
+    for (var j = 0; j < btns.length; j++) {
+      btns[j].classList.remove('on');
+      if (btns[j].getAttribute('data-screen') === id) btns[j].classList.add('on');
+    }
+    window.scrollTo(0, 0);
+  }
+
+  function setRole(role) {
+    currentRole = role;
+    if (role === 'manager') {
+      document.getElementById('header-username').textContent = '김에어';
+      document.getElementById('header-role').textContent = '마케팅팀 · 담당자';
+      document.getElementById('new-notice-btn').style.display = '';
+      document.getElementById('detail-action-btns').style.display = '';
+      if(document.getElementById('status-change-area')) document.getElementById('status-change-area').style.display = '';
+      document.getElementById('comment-area-title').textContent = '답변 / 질문 등록';
+      document.getElementById('comment-type-row').style.display = 'flex';
+    } else {
+      document.getElementById('header-username').textContent = '서실장';
+      document.getElementById('header-role').textContent = '고객센터 · 실장';
+      document.getElementById('new-notice-btn').style.display = 'none';
+      // 상세 화면에서 수정 버튼 숨기기
+      var detailBtns = document.getElementById('detail-action-btns');
+      if (detailBtns) {
+        var btns = detailBtns.querySelectorAll('button');
+        btns[0].style.display = ''; // 목록 버튼은 유지
+        if(btns[1]) btns[1].style.display = 'none'; // 수정 버튼 숨김
+      }
+      if(document.getElementById('status-change-area')) document.getElementById('status-change-area').style.display = 'none';
+      document.getElementById('comment-area-title').textContent = '질문 / 이슈 등록';
+      // 고객센터는 답변 유형 없이 질문/오류신고/VOC만
+    }
+  }
+
+  function switchTab(el, targetId) {
+    // 탭 버튼
+    var tabs = document.querySelectorAll('.tab');
+    for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active-tab');
+    el.classList.add('active-tab');
+    // 탭 콘텐츠
+    var contents = ['tab-content','tab-qna','tab-history'];
+    for (var j = 0; j < contents.length; j++) {
+      var el2 = document.getElementById(contents[j]);
+      if (el2) el2.style.display = (contents[j] === targetId) ? 'block' : 'none';
+    }
+  }
+
+  function filterStatus(el, label) {
+    var items = document.querySelectorAll('.cat-item');
+    for (var i = 0; i < items.length; i++) items[i].classList.remove('active-cat');
+    el.classList.add('active-cat');
+    var lbl = document.getElementById('filter-label-current');
+    if (lbl) lbl.textContent = label;
+  }
+
+  function selectType(btn) {
+    var btns = btn.parentNode.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].style.background = '';
+      btns[i].style.borderColor = '';
+      btns[i].style.color = '';
+    }
+    btn.style.background = '#e8f0fe';
+    btn.style.borderColor = '#c5d5f8';
+    btn.style.color = '#1a56db';
+  }
+</script>
+</body>
+</html>
